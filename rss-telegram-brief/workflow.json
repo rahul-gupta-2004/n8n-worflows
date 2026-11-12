@@ -1,0 +1,359 @@
+{
+  "name": "news-telegram-bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -736,
+        0
+      ],
+      "id": "7688c8fa-2f55-4e87-be6f-7a3d93969b89",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://www.wired.com/feed/rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        192
+      ],
+      "id": "285bb2b1-143d-4227-a185-46158e752fbe",
+      "name": "Wired RSS Read"
+    },
+    {
+      "parameters": {
+        "url": "https://openai.com/news/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -192
+      ],
+      "id": "9d0cc34c-1c1e-47e9-b3b7-d42e09a9679d",
+      "name": "OpenAI RSS Read"
+    },
+    {
+      "parameters": {
+        "url": "https://www.theverge.com/rss/index.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "1e1b767f-5a28-4734-8b56-3098087ca67b",
+      "name": "Verge RSS Read"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        192,
+        -16
+      ],
+      "id": "0eefed82-d846-4aab-b0f8-aff6b4d29af4",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "pubDate",
+              "order": "descending"
+            },
+            {
+              "fieldName": "isoDate",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "1a8cd135-916e-4cb7-9dcd-10e5ba355efc",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "maxItems": 15
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "83cb6f92-c6b1-44aa-a5dc-d2541dacd155",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "title"
+            },
+            {
+              "fieldToAggregate": "content"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        832,
+        0
+      ],
+      "id": "4a2a8f14-5ad6-4ff7-8389-b401caee36c7",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "chatId": "7276639413",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "ad08ebce-5e20-4874-8e20-a7c73f5bc042",
+      "name": "Send a text message",
+      "webhookId": "f288eb74-952a-4e5b-b2f2-442adcd2d356",
+      "credentials": {
+        "telegramApi": {
+          "id": "9LrSDRMXWyW6cWvM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "14652eef-53d1-44ff-b6b0-28fe42549071",
+              "name": "text",
+              "value": "={{ $json.content.replace(/<[^>]*>?/gm, '').replace(/[*#]/g, '').replace(/•/g, '-').replace(/\\\\n/g, '\\n').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "8bfe5452-f4d5-44aa-a9e9-666354512b8c",
+      "name": "Clean Text"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "llama3.2:1b",
+          "mode": "list",
+          "cachedResultName": "llama3.2:1b"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Summarize the 3 most important tech news items from the data below.\n\nFORMATTING RULES:\n- Wrap each main news title in <b> </b> tags (e.g., <b>Title Goes Here</b>).\n- Put a real line break right after the title.\n- Use a dash (-) for the 2 bullet points under each title.\n- Leave one completely blank line between each news item.\n- Do NOT use emojis.\n\nNews data: {{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "9657dd0f-a7cd-4098-98e9-f7a9b4ede4d0",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "ollamaApi": {
+          "id": "FBRRpKIdBRGLfkUW",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "OpenAI RSS Read",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verge RSS Read",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wired RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wired RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "OpenAI RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verge RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Text": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Clean Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4f271d5c-8621-4c49-a2f3-e41a7ba6a33a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "227e7642b73183076eeb5d1c549887ff77e3d94e55ef5e06407b122a52cab21f"
+  },
+  "nodeGroups": [],
+  "id": "brO3yikTOyMcRZw7",
+  "tags": []
+}
